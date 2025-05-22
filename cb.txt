@@ -1,0 +1,119 @@
+                                                                                                     7
+                                       Building Assistants
+                                      with the OpenAI API
+The primary reason that ChatGPT changed the Generative AI landscape is that it marketed itself as an
+easy-to-use all-in-one digital assistant. This approach has made it highly accessible to a broad range
+of users, from developers and businesses to educators and creative professionals.
+The versatility of the OpenAI API lies in its ability to understand and generate human-like text, enabling
+the creation of sophisticated digital assistants tailored to various needs. Whether it’s automating
+customer service, providing educational support, assisting in content creation, or enabling interactive
+storytelling, the API’s robust features allow for endless possibilities.
+As a result, we can use the API, along with the other elements that we learned about in previous chapters,
+to create powerful knowledge assistants. How will the assistant that we create differ from the ChatGPT
+product itself? The answer lies in the knowledge or information to which the assistant has access.
+OpenAI has trained ChatGPT on a variety of different sources on the internet, but the model itself is
+data-limited. This has two implications:
+
+   • Information is out of date: The model (without any extensions or plugins) cannot provide
+     current or up-to-date information. For example, you cannot ask it what was the score
+     in yesterday's basketball game.
+   • Knowledge retrieval is messy: You cannot restrict the model to only look at specific sources when
+     answering questions. Because of this and since the data has been trained on various sources
+     from the internet (and certainly not everything online is correct), this means that the answers
+     you get may not always be correct. This can also occur due to hallucinations.
+
+How do we fix this? We can build our own assistants that use both the OpenAI API and a trusted
+knowledge source that we specify. This can be in the form of a PDF file that the user can upload or a
+web link that we know has the most up-to-date information.
+134   Building Assistants with the OpenAI API
+
+
+      In this chapter, we will build knowledge-based assistants. We will use ChatGPT’s ability to understand
+      human-like text and respond accordingly, as well as a trusted up-to-date knowledge source. Similar to
+      the previous chapter, the application architecture will contain the frontend and backend that access
+      the OpenAI API. However, we will add an intermediary step to account for the knowledge source. If
+      you don’t recall the architecture, Figure 7.1 demonstrates the layers within any application.
+
+
+
+
+                           Figure 7.1 – Demonstration of a typical application architecture
+                                 using the OpenAI API with the Knowledge Source
+
+      In this chapter, we will cover the following recipes:
+
+         • Creating a knowledge-retrieval assistant application
+         • Creating a knowledge-retrieval assistant through the Assistants API
+
+      Technical requirements
+      All the recipes in this chapter require you to have access to the OpenAI API (via a generated API key)
+      and have an API client installed. You can refer to the Chapter 1 recipe Making OpenAI API requests
+      with Postman for more information on how to obtain your API key. This will also require knowledge
+      of Python and the Python OpenAI library, which we covered in the first recipe within Chapter 4.
+      We will also use the Google Cloud Platform (GCP) to host our public endpoint. GCP is a suite of
+      cloud computing services offered by Google. It provides a range of hosting and computing services
+      for databases, data storage, data analytics, machine learning, and more, all hosted on Google’s
+      infrastructure. You can refer to the Chapter 5 recipe Creating a public endpoint server that calls the
+      OpenAI API for more information.
+      Finally, you need to be familiar with Bubble, which is a visual programming platform that allows users
+      to create web applications without needing to write code. You can refer to the Chapter 5 recipe Calling
+      the user-created endpoint from no-code applications for more information on how to set up Bubble.
+                                                    Creating a knowledge-retrieval assistant application   135
+
+
+It is also recommended that you complete the recipes in Chapter 6, as this chapter’s recipes will cover
+concepts that we learned in that chapter.
+
+
+Creating a knowledge-retrieval assistant application
+In this first recipe, we will build an intelligent application that analyzes an uploaded PDF document
+and answers questions about it that the user poses. This can have several use cases, such as aiding
+in academic research by quickly summarizing key points, assisting legal professionals in extracting
+specific information from lengthy documents, or aiding businesses in understanding technical reports.
+The application will leverage the OpenAI API’s NLP capabilities to interpret the content of the PDF
+and provide accurate, context-aware responses. This not only streamlines the process of information
+retrieval but also enhances user engagement by offering interactive, AI-driven insights.
+The example that we will follow is one where we upload the following instructional manual about a
+drone, and we want to ask questions such as what is the maximum height I can fly
+this drone? and How do I recharge the drone battery?. The PDF of the drone
+instructional manual can be found here: https://bookpackt67.blob.core.windows.
+net/test/XDroneManual.pdf?sp=r&st=2024-01-12T00:52:16Z&se=2024-12-
+31T08:52:16Z&spr=https&sv=2022-11-02&sr=b&sig=IEXLlGXVXCilEg0ffqW8
+ItXc4LX2YkbRWuZIpSxfP8Y%3D. We should download the file to our computer before starting
+the recipe. A screenshot of the file can be seen in Figure 7.2.
+
+
+
+
+                                 Figure 7.2 – PDF of the drone manual
+136   Building Assistants with the OpenAI API
+
+
+      Getting ready
+      Ensure you have an OpenAI Platform account with available usage credits. If you don’t, please follow
+      the Setting up your OpenAI Playground environment recipe in Chapter 1.
+      Furthermore, ensure you have created a GCP account. You may need to provide a billing profile as
+      well to create any GCP resources. Note that GCP does have a free tier, and in this recipe, we will not
+      go above the free tier (so, essentially, you should not be billed for anything).
+      Finally, ensure that you have created a Bubble account, which you can do for free at http://
+      bubble.io.
+      Both the recipes in this chapter will have this same requirement.
+
+      How to do it…
+      Google Cloud Functions
+
+        1.   In a new browser tab, navigate to https://cloud.google.com and log in with your
+             Google credentials.
+        2.   Select Console in the top right.
+        3.   Create a new Google cloud function. In the search bar, type in function, select Cloud
+             Functions, and then select Create Function.
+        4.   Name the function a descriptive name. Since this function will return answers based on a file,
+             we are going to aptly name it get_answer_from_file.
+        5.   In the Authentication menu, ensure that you select Allow unauthenticated invocations
+             as the authentication method. This will enable the frontend application to make calls to the
+             backend layer.
+        6.   Select the Runtime, build, connections and security settings drop-down menu to expand
+             the options. Change Timeout from 60 seconds to 300 seconds. This will make sure that the
+             timeout for the Google cloud function is not 1 minute but 5 minutes instead. This is important
+             in multi-modal applications, as several API requests will be made.
+
